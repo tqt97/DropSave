@@ -388,4 +388,16 @@ export const cancelDownload = async (): Promise<void> => {
   await child.kill();
   activeChild = null;
   await cleanupPartialFiles(options);
+
+  if (options) {
+    try {
+      await invoke<boolean>('remove_output_file', {
+        outputDirectory: options.outputDirectory,
+        filename: options.filename,
+        extension: outputExtension(options.mode)
+      });
+    } catch {
+      // Best-effort cleanup after an explicit user cancellation.
+    }
+  }
 };
