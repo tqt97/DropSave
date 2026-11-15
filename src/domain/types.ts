@@ -40,4 +40,15 @@ export interface FriendlyError {
   suggestion?: string;
   technical?: string;
   code?: 'file_exists' | 'disk_space' | 'network' | 'cancelled' | 'generic';
+  suggestedFilename?: string;
+}
+
+export interface DownloadHistoryItem {
+  id: string;
+  title: string;
+  filename: string;
+  outputDirectory: string;
+  mode: DownloadMode;
+  url: string;
+  completedAt: string;
 }
