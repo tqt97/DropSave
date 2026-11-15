@@ -1,6 +1,7 @@
 export type DownloadMode = 'video' | 'audio';
 export type VideoQuality = 'best' | '1080' | '720';
 export type DownloadState = 'idle' | 'inspecting' | 'ready' | 'downloading' | 'completed' | 'error';
+export type DownloadPhase = 'preparing' | 'checking-space' | 'downloading' | 'postprocessing' | 'retrying' | 'completed';
 
 export interface VideoMetadata {
   title: string;
@@ -9,6 +10,7 @@ export interface VideoMetadata {
   duration?: number;
   webpageUrl: string;
   extractor?: string;
+  estimatedBytes?: number;
 }
 
 export interface DownloadOptions {
@@ -17,6 +19,7 @@ export interface DownloadOptions {
   quality: VideoQuality;
   outputDirectory: string;
   filename: string;
+  estimatedBytes?: number;
 }
 
 export interface DownloadProgress {
@@ -26,6 +29,9 @@ export interface DownloadProgress {
   speed?: string;
   eta?: string;
   statusText: string;
+  phase?: DownloadPhase;
+  retryAttempt?: number;
+  retryMax?: number;
 }
 
 export interface FriendlyError {
@@ -33,4 +39,5 @@ export interface FriendlyError {
   message: string;
   suggestion?: string;
   technical?: string;
+  code?: 'file_exists' | 'disk_space' | 'network' | 'cancelled' | 'generic';
 }
