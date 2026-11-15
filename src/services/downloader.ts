@@ -5,8 +5,12 @@ import { mapDownloaderError } from './error-mapper';
 
 const YT_DLP = 'binaries/yt-dlp';
 const PROGRESS_PREFIX = '__DROPSAVE_PROGRESS__';
+const RETRY_MAX = 3;
+const UNKNOWN_SIZE_MIN_FREE_BYTES = 256 * 1024 * 1024;
 
 let activeChild: Child | null = null;
+let activeOptions: DownloadOptions | null = null;
+let cancelRequested = false;
 
 const cleanJson = (stdout: string): string => {
   const firstBrace = stdout.indexOf('{');
@@ -14,11 +18,20 @@ const cleanJson = (stdout: string): string => {
   return firstBrace >= 0 && lastBrace >= firstBrace ? stdout.slice(firstBrace, lastBrace + 1) : stdout;
 };
 
+const numberOrUndefined = (value: unknown): number | undefined =>
+  typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : undefined;
+
 export const inspectVideo = async (url: string): Promise<VideoMetadata> => {
   const command = Command.sidecar(YT_DLP, [
     '--no-playlist',
     '--dump-single-json',
     '--no-warnings',
+    '--retries', String(RETRY_MAX),
+    '--fragment-retries', String(RETRY_MAX),
+    '--extractor-retries', String(RETRY_MAX),
+    '--retry-sleep', 'exp=1:8',
+    '--retry-sleep', 'fragment:exp=1:8',
+    '--retry-sleep', 'extractor:exp=1:8',
     url
   ]);
   const output = await command.execute();
@@ -32,14 +45,23 @@ export const inspectVideo = async (url: string): Promise<VideoMetadata> => {
     thumbnail: info.thumbnail ? String(info.thumbnail) : undefined,
     duration: typeof info.duration === 'number' ? info.duration : undefined,
     webpageUrl: String(info.webpage_url ?? url),
-    extractor: info.extractor_key ? String(info.extractor_key) : undefined
+    extractor: info.extractor_key ? String(info.extractor_key) : undefined,
+    estimatedBytes: numberOrUndefined(info.filesize_approx) ?? numberOrUndefined(info.filesize)
   };
 };
 
 const qualitySelector = (quality: DownloadOptions['quality']): string => {
-  if (quality === '1080') return 'bv*[height<=1080]+ba/b[height<=1080]';
-  if (quality === '720') return 'bv*[height<=720]+ba/b[height<=720]';
-  return 'bv*+ba/b';
+  const height = quality === '1080' ? '1080' : quality === '720' ? '720' : null;
+  if (!height) {
+    return 'bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/bv*+ba/b';
+  }
+
+  return [
+    `bv*[ext=mp4][height<=?${height}]+ba[ext=m4a]`,
+    `b[ext=mp4][height<=?${height}]`,
+    `bv*[height<=?${height}]+ba`,
+    `b[height<=?${height}]`
+  ].join('/');
 };
 
 const outputExtension = (mode: DownloadOptions['mode']): 'mp4' | 'mp3' => mode === 'audio' ? 'mp3' : 'mp4';
@@ -55,15 +77,66 @@ const parseProgressLine = (line: string): DownloadProgress | null => {
     total: total || undefined,
     speed: speed || undefined,
     eta: eta || undefined,
-    statusText: percent >= 100 ? 'Đang hoàn tất tệp…' : 'Đang tải…'
+    phase: percent >= 100 ? 'postprocessing' : 'downloading',
+    statusText: percent >= 100 ? 'Đang xử lý tệp…' : 'Đang tải dữ liệu…'
   };
 };
 
-const fileExistsError = (filename: string, extension: string): FriendlyError => ({
-  title: 'Tệp đã tồn tại',
-  message: `Đã có tệp “${filename}.${extension}” trong thư mục đã chọn. DropSave không ghi đè tệp hiện có.`,
-  suggestion: 'Hãy đổi tên file hoặc chọn một thư mục lưu khác rồi tải lại.'
+const fileExistsError = async (
+  options: DownloadOptions,
+  extension: string
+): Promise<FriendlyError> => {
+  const suggestedFilename = await invoke<string>('suggest_output_filename', {
+    outputDirectory: options.outputDirectory,
+    filename: options.filename,
+    extension
+  });
+
+  return {
+    title: 'Tệp đã tồn tại',
+    message: `Đã có tệp “${options.filename}.${extension}” trong thư mục đã chọn. DropSave sẽ không ghi đè.`,
+    suggestion: `Bạn có thể dùng tên “${suggestedFilename}.${extension}” hoặc chọn thư mục khác.`,
+    code: 'file_exists',
+    suggestedFilename
+  };
+};
+
+const diskSpaceError = (available: number, required: number): FriendlyError => ({
+  title: 'Không đủ dung lượng trống',
+  message: 'Ổ đĩa hiện không còn đủ dung lượng an toàn để bắt đầu tải.',
+  suggestion: `Cần khoảng ${Math.ceil(required / 1024 / 1024)} MB, hiện còn khoảng ${Math.floor(available / 1024 / 1024)} MB.`,
+  code: 'disk_space'
 });
+
+const preflightDiskSpace = async (options: DownloadOptions): Promise<void> => {
+  const available = await invoke<number>('available_space', {
+    outputDirectory: options.outputDirectory
+  });
+  const required = options.estimatedBytes
+    ? Math.max(Math.ceil(options.estimatedBytes * 1.15), UNKNOWN_SIZE_MIN_FREE_BYTES)
+    : UNKNOWN_SIZE_MIN_FREE_BYTES;
+
+  if (available < required) throw diskSpaceError(available, required);
+};
+
+const cleanupPartialFiles = async (options: DownloadOptions | null): Promise<void> => {
+  if (!options) return;
+  try {
+    await invoke<number>('cleanup_partial_files', {
+      outputDirectory: options.outputDirectory,
+      filename: options.filename
+    });
+  } catch {
+    // Cleanup is best-effort and must not hide the original error.
+  }
+};
+
+const isPostProcessLine = (line: string): boolean =>
+  /\[(Merger|ExtractAudio|VideoConvertor|VideoRemuxer|FFmpeg|Fixup)/i.test(line)
+  || /post-?process|merging formats|converting video/i.test(line);
+
+const isRetryLine = (line: string): boolean =>
+  /retrying|retry attempt|unable to download.*retry/i.test(line);
 
 export const downloadMedia = async (
   options: DownloadOptions,
@@ -77,7 +150,10 @@ export const downloadMedia = async (
     filename: options.filename,
     extension
   });
-  if (exists) throw fileExistsError(options.filename, extension);
+  if (exists) throw await fileExistsError(options, extension);
+
+  onProgress({ percent: 0, phase: 'checking-space', statusText: 'Đang kiểm tra dung lượng…' });
+  await preflightDiskSpace(options);
 
   const finalPath = await invoke<string>('output_file_path', {
     outputDirectory: options.outputDirectory,
@@ -86,12 +162,20 @@ export const downloadMedia = async (
   });
   const outputTemplate = `${options.outputDirectory}/${options.filename}.%(ext)s`;
   const ffmpegPath = await invoke<string>('ffmpeg_path');
+
   const args = [
     '--no-playlist',
     '--no-overwrites',
+    '--continue',
+    '--part',
     '--newline',
-    '--no-warnings',
     '--ffmpeg-location', ffmpegPath,
+    '--retries', String(RETRY_MAX),
+    '--fragment-retries', String(RETRY_MAX),
+    '--extractor-retries', String(RETRY_MAX),
+    '--retry-sleep', 'exp=1:8',
+    '--retry-sleep', 'fragment:exp=1:8',
+    '--retry-sleep', 'extractor:exp=1:8',
     '--progress-template',
     `download:${PROGRESS_PREFIX}%(progress._percent_str)s|%(progress._downloaded_bytes_str)s|%(progress._total_bytes_str)s|%(progress._speed_str)s|%(progress._eta_str)s`,
     '-o', outputTemplate
@@ -100,36 +184,87 @@ export const downloadMedia = async (
   if (options.mode === 'audio') {
     args.push('-x', '--audio-format', 'mp3', '--audio-quality', '0');
   } else {
-    args.push('-f', qualitySelector(options.quality), '--merge-output-format', 'mp4', '--remux-video', 'mp4');
+    args.push(
+      '-f', qualitySelector(options.quality),
+      '--format-sort', '+codec:avc:m4a',
+      '--merge-output-format', 'mp4',
+      '--remux-video', 'mp4'
+    );
   }
   args.push(options.url);
 
   const command = Command.sidecar(YT_DLP, args);
   let stderr = '';
+  let currentPercent = 0;
 
-  command.stdout.on('data', (line) => {
-    const progress = parseProgressLine(line.trim());
-    if (progress) onProgress(progress);
+  const handleLogLine = (line: string) => {
+    const trimmed = line.trim();
+    const parsed = parseProgressLine(trimmed);
+    if (parsed) {
+      currentPercent = parsed.percent;
+      onProgress(parsed);
+      return;
+    }
+    if (isRetryLine(trimmed)) {
+      onProgress({
+        percent: currentPercent,
+        phase: 'retrying',
+        retryMax: RETRY_MAX,
+        statusText: 'Kết nối gián đoạn, DropSave đang thử lại…'
+      });
+      return;
+    }
+    if (isPostProcessLine(trimmed)) {
+      onProgress({
+        percent: Math.max(currentPercent, 99),
+        phase: 'postprocessing',
+        statusText: 'Đang ghép/chuyển đổi để tệp dễ phát hơn…'
+      });
+    }
+  };
+
+  command.stdout.on('data', handleLogLine);
+  command.stderr.on('data', (line) => {
+    stderr += `${line}\n`;
+    handleLogLine(line);
   });
-  command.stderr.on('data', (line) => { stderr += `${line}\n`; });
 
+  activeOptions = options;
+  cancelRequested = false;
+  onProgress({ percent: 0, phase: 'preparing', statusText: 'Đang chuẩn bị trình tải…' });
   activeChild = await command.spawn();
 
-  await new Promise<void>((resolve, reject) => {
-    command.on('close', (data) => {
-      activeChild = null;
-      if (data.code === 0) {
-        onProgress({ percent: 100, statusText: 'Hoàn tất' });
-        resolve();
-      } else {
+  try {
+    await new Promise<void>((resolve, reject) => {
+      command.on('close', (data) => {
+        activeChild = null;
+        if (data.code === 0) {
+          onProgress({ percent: 100, phase: 'completed', statusText: 'Hoàn tất' });
+          resolve();
+          return;
+        }
+
+        if (cancelRequested) {
+          reject({
+            title: 'Đã hủy tải',
+            message: 'Tiến trình tải đã được dừng và DropSave đang dọn tệp tạm.',
+            code: 'cancelled'
+          } satisfies FriendlyError);
+          return;
+        }
         reject(mapDownloaderError(stderr || `Process exited with code ${data.code}`));
-      }
+      });
+      command.on('error', (error) => {
+        activeChild = null;
+        reject(mapDownloaderError(String(error)));
+      });
     });
-    command.on('error', (error) => {
-      activeChild = null;
-      reject(mapDownloaderError(String(error)));
-    });
-  });
+  } catch (error) {
+    await cleanupPartialFiles(options);
+    throw error;
+  } finally {
+    activeOptions = null;
+  }
 
   return finalPath;
 };
@@ -145,6 +280,10 @@ export const revealDownloadedFile = async (options: Pick<DownloadOptions, 'outpu
 export const cancelDownload = async (): Promise<void> => {
   const child = activeChild;
   if (!child) return;
+
+  cancelRequested = true;
+  const options = activeOptions;
   await child.kill();
   activeChild = null;
+  await cleanupPartialFiles(options);
 };
