@@ -110,6 +110,28 @@ fn cleanup_partial_files(output_directory: String, filename: String) -> Result<u
 }
 
 #[tauri::command]
+fn compatibility_temp_path(output_directory: String, filename: String) -> Result<String, String> {
+    let final_path = safe_output_path(&output_directory, &filename, "mp4")?;
+    let temp_path = final_path.with_file_name(format!("{filename}.compatible.mp4"));
+    Ok(temp_path.to_string_lossy().into_owned())
+}
+
+#[tauri::command]
+fn replace_with_compatible_file(output_directory: String, filename: String) -> Result<(), String> {
+    let final_path = safe_output_path(&output_directory, &filename, "mp4")?;
+    let temp_path = final_path.with_file_name(format!("{filename}.compatible.mp4"));
+
+    if !temp_path.is_file() {
+        return Err("Compatible transcoded file was not created.".into());
+    }
+
+    if final_path.exists() {
+        fs::remove_file(&final_path).map_err(|error| error.to_string())?;
+    }
+    fs::rename(&temp_path, &final_path).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
 fn reveal_output_file(
     app: tauri::AppHandle,
     output_directory: String,
@@ -141,6 +163,8 @@ pub fn run() {
             suggest_output_filename,
             available_space,
             cleanup_partial_files,
+            compatibility_temp_path,
+            replace_with_compatible_file,
             reveal_output_file
         ])
         .run(tauri::generate_context!())
