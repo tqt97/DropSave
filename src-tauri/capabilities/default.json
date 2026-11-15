@@ -30,6 +30,7 @@
       ]
     },
     "shell:allow-kill",
-    "opener:default"
+    "opener:default",
+    "notification:default"
   ]
 }
