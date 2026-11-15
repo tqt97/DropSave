@@ -95,11 +95,13 @@ fn cleanup_partial_files(output_directory: String, filename: String) -> Result<u
             continue;
         };
 
-        let is_partial = name.starts_with(&prefix)
+        let compatibility_temp = format!("{filename}.compatible.mp4");
+        let is_partial = (name.starts_with(&prefix)
             && (name.ends_with(".part")
                 || name.ends_with(".ytdl")
                 || name.ends_with(".temp")
-                || name.contains(".part-"));
+                || name.contains(".part-")))
+            || name == compatibility_temp;
 
         if is_partial && fs::remove_file(&path).is_ok() {
             removed += 1;
