@@ -1,6 +1,6 @@
 # DropSave — Development Roadmap
 
-> Product version hiện giữ nguyên **v1.0.0** trong quá trình hoàn thiện V1.
+> Current release line: **v.1.0.1** — reliability & compatibility upgrade.
 
 ## Milestone A — Core usability & compatibility
 
@@ -34,7 +34,7 @@ Cần hoàn thiện trước khi mở rộng feature lớn:
 2. Kiểm tra 100% / 125% / 150% display scaling.
 3. Test Facebook / YouTube / TikTok public URL matrix.
 4. Test cancel ở download và FFmpeg post-process.
-5. Test TikTok/nguồn chỉ có HEVC để quyết định policy fallback/transcode H.264.
+5. Test TikTok/nguồn chỉ có HEVC/AV1 để verify automatic H.264/AAC compatibility conversion.
 6. Windows code signing.
 7. macOS Developer ID signing + notarization.
 8. Dependency security audit có kiểm soát.
