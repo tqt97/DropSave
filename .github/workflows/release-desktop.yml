@@ -1,0 +1,197 @@
+name: Release Desktop
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    name: Windows x64
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Security audit runtime dependencies
+        shell: pwsh
+        run: |
+          npm audit --omit=dev --json | Out-File -Encoding utf8 npm-audit-runtime.json
+          npm audit --omit=dev --audit-level=high
+        continue-on-error: true
+
+      - name: Prepare app assets
+        run: npm run prepare:assets
+
+      - name: Prepare pinned sidecars
+        run: npm run prepare:sidecars
+
+      - name: Build NSIS installer
+        uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          args: --bundles nsis
+
+      - name: Normalize Windows artifact
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path release-artifact | Out-Null
+          $installer = Get-ChildItem -Path src-tauri/target/release/bundle/nsis -Filter '*-setup.exe' | Select-Object -First 1
+          if (-not $installer) { throw 'NSIS setup executable was not generated.' }
+          Copy-Item $installer.FullName release-artifact/DropSave-Windows-x64-Setup.exe
+          Copy-Item npm-audit-runtime.json release-artifact/npm-audit-runtime.json -ErrorAction SilentlyContinue
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: DropSave-Windows-x64
+          path: release-artifact/
+
+  build-macos-arm64:
+    name: macOS Apple Silicon
+    runs-on: macos-15
+    env:
+      APPLE_SIGNING_IDENTITY: '-'
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Prepare app assets
+        run: npm run prepare:assets
+
+      - name: Prepare pinned yt-dlp and bundled FFmpeg
+        run: npm run prepare:sidecars
+
+      - name: Build DMG
+        uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APPLE_SIGNING_IDENTITY: '-'
+        with:
+          args: --bundles dmg
+
+      - name: Normalize macOS artifact
+        run: |
+          mkdir -p release-artifact
+          DMG=$(find src-tauri/target/release/bundle/dmg -name '*.dmg' -type f | head -n 1)
+          test -n "$DMG"
+          cp "$DMG" release-artifact/DropSave-macOS-Apple-Silicon.dmg
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: DropSave-macOS-Apple-Silicon
+          path: release-artifact/
+
+  build-macos-intel:
+    name: macOS Intel
+    runs-on: macos-15-intel
+    env:
+      APPLE_SIGNING_IDENTITY: '-'
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-apple-darwin
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Prepare app assets
+        run: npm run prepare:assets
+
+      - name: Prepare pinned yt-dlp and bundled FFmpeg
+        run: npm run prepare:sidecars
+
+      - name: Build DMG
+        uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APPLE_SIGNING_IDENTITY: '-'
+        with:
+          args: --bundles dmg
+
+      - name: Normalize macOS artifact
+        run: |
+          mkdir -p release-artifact
+          DMG=$(find src-tauri/target/release/bundle/dmg -name '*.dmg' -type f | head -n 1)
+          test -n "$DMG"
+          cp "$DMG" release-artifact/DropSave-macOS-Intel.dmg
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: DropSave-macOS-Intel
+          path: release-artifact/
+
+  publish-release:
+    name: Publish GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build-windows, build-macos-arm64, build-macos-intel]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: DropSave-*
+          path: release-files
+          merge-multiple: true
+
+      - name: Publish release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            release-files/DropSave-Windows-x64-Setup.exe
+            release-files/DropSave-macOS-Apple-Silicon.dmg
+            release-files/DropSave-macOS-Intel.dmg

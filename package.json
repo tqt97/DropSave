@@ -1,0 +1,43 @@
+{
+  "name": "video-downloader-desktop",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "prepare:sidecars": "node scripts/prepare-sidecars.mjs",
+    "desktop:dev": "npm run bootstrap && npm run prepare:assets && npm run prepare:sidecars && tauri dev",
+    "desktop:build": "npm run bootstrap && npm run prepare:assets && npm run prepare:sidecars && node scripts/build-desktop.mjs",
+    "test": "vitest run",
+    "doctor": "node scripts/check-build-environment.mjs",
+    "bootstrap": "node scripts/bootstrap-build-environment.mjs",
+    "prepare:assets": "node scripts/prepare-build-assets.mjs"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.8.0",
+    "@tauri-apps/plugin-clipboard-manager": "^2.3.0",
+    "@tauri-apps/plugin-dialog": "^2.4.0",
+    "@tauri-apps/plugin-opener": "^2.5.0",
+    "@tauri-apps/plugin-shell": "^2.3.0",
+    "lucide-react": "^0.468.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.2.0",
+    "@tauri-apps/cli": "^2.8.4",
+    "@types/react": "^19.1.12",
+    "@types/react-dom": "^19.1.9",
+    "@vitejs/plugin-react": "^4.4.1",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5",
+    "vitest": "^3.2.4"
+  },
+  "allowScripts": {
+    "esbuild@0.25.12": true
+  }
+}

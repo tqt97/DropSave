@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "ytDlp": {
+    "version": "2026.10.26",
+    "baseUrl": "https://github.com/yt-dlp/yt-dlp/releases/download/2026.10.26",
+    "checksumFile": "SHA2-256SUMS"
+  },
+  "ffmpeg": {
+    "windows": {
+      "version": "9.0.2",
+      "url": "https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-9.0.2-essentials_build.zip",
+      "checksumUrl": "https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-9.0.2-essentials_build.zip.sha256"
+    },
+    "macos": {
+      "provider": "homebrew",
+      "formula": "ffmpeg",
+      "expectedMajor": "9."
+    }
+  }
+}
