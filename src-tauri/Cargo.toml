@@ -1,6 +1,6 @@
 [package]
 name = "dropsave"
-version = "1.0.0"
+version = "1.0.1"
 description = "A friendly cross-platform media downloader"
 authors = ["TuanTQ"]
 edition = "2021"
