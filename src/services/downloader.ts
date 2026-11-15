@@ -4,6 +4,7 @@ import type { DownloadOptions, DownloadProgress, FriendlyError, VideoMetadata } 
 import { mapDownloaderError } from './error-mapper';
 
 const YT_DLP = 'binaries/yt-dlp';
+const FFMPEG = 'binaries/ffmpeg';
 const PROGRESS_PREFIX = '__DROPSAVE_PROGRESS__';
 const RETRY_MAX = 3;
 const UNKNOWN_SIZE_MIN_FREE_BYTES = 256 * 1024 * 1024;
@@ -20,6 +21,15 @@ const cleanJson = (stdout: string): string => {
 
 const numberOrUndefined = (value: unknown): number | undefined =>
   typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : undefined;
+
+const hasH264Format = (formats: unknown): boolean | undefined => {
+  if (!Array.isArray(formats)) return undefined;
+  return formats.some((format) => {
+    if (!format || typeof format !== 'object') return false;
+    const codec = String((format as Record<string, unknown>).vcodec ?? '').toLowerCase();
+    return codec.startsWith('avc1') || codec.startsWith('h264');
+  });
+};
 
 export const inspectVideo = async (url: string): Promise<VideoMetadata> => {
   const command = Command.sidecar(YT_DLP, [
@@ -46,7 +56,8 @@ export const inspectVideo = async (url: string): Promise<VideoMetadata> => {
     duration: typeof info.duration === 'number' ? info.duration : undefined,
     webpageUrl: String(info.webpage_url ?? url),
     extractor: info.extractor_key ? String(info.extractor_key) : undefined,
-    estimatedBytes: numberOrUndefined(info.filesize_approx) ?? numberOrUndefined(info.filesize)
+    estimatedBytes: numberOrUndefined(info.filesize_approx) ?? numberOrUndefined(info.filesize),
+    compatibleVideoAvailable: hasH264Format(info.formats)
   };
 };
 
@@ -266,7 +277,60 @@ export const downloadMedia = async (
     activeOptions = null;
   }
 
+  if (options.mode === 'video' && options.forceCompatibilityTranscode) {
+    await transcodeForCompatibility(options, finalPath, onProgress);
+    onProgress({ percent: 100, phase: 'completed', statusText: 'Hoàn tất · H.264/AAC' });
+  }
+
   return finalPath;
+};
+
+const transcodeForCompatibility = async (
+  options: DownloadOptions,
+  finalPath: string,
+  onProgress: (progress: DownloadProgress) => void
+): Promise<void> => {
+  const tempPath = await invoke<string>('compatibility_temp_path', {
+    outputDirectory: options.outputDirectory,
+    filename: options.filename
+  });
+
+  onProgress({
+    percent: 99,
+    phase: 'postprocessing',
+    statusText: 'Nguồn không có H.264. Đang chuyển sang H.264/AAC để tăng tương thích…'
+  });
+
+  const command = Command.sidecar(FFMPEG, [
+    '-y',
+    '-i', finalPath,
+    '-map', '0:v:0',
+    '-map', '0:a?',
+    '-c:v', 'libx264',
+    '-preset', 'medium',
+    '-crf', '20',
+    '-pix_fmt', 'yuv420p',
+    '-c:a', 'aac',
+    '-b:a', '192k',
+    '-movflags', '+faststart',
+    tempPath
+  ]);
+
+  const output = await command.execute();
+  if (output.code !== 0) {
+    throw {
+      title: 'Không thể chuyển đổi codec',
+      message: 'Video đã tải nhưng bước chuyển sang H.264/AAC không hoàn tất.',
+      suggestion: 'File nguồn có thể vẫn phát được bằng VLC. Hãy thử lại hoặc mở issue kèm URL public để kiểm tra.',
+      technical: output.stderr || output.stdout,
+      code: 'generic'
+    } satisfies FriendlyError;
+  }
+
+  await invoke('replace_with_compatible_file', {
+    outputDirectory: options.outputDirectory,
+    filename: options.filename
+  });
 };
 
 export const revealDownloadedFile = async (options: Pick<DownloadOptions, 'outputDirectory' | 'filename' | 'mode'>): Promise<void> => {
