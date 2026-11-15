@@ -2,105 +2,94 @@
 
 > Product version hiện giữ nguyên **v1.0.0** trong quá trình hoàn thiện V1.
 
-## Milestone A — V1 Production Stabilization
+## Milestone A — Core usability & compatibility
 
-Mục tiêu: một người dùng phổ thông có thể cài, tải video và xử lý lỗi phổ biến mà không cần Terminal.
+### Đã triển khai
 
-### Đã có
-
-- URL validation.
-- Metadata + thumbnail preview.
+- URL validation + metadata/thumbnail preview.
 - Video / Audio.
 - Best / 1080p / 720p.
-- MP4 mặc định cho video, MP3 cho audio.
+- Video MP4, audio MP3.
+- **Ưu tiên H.264/AVC + AAC/M4A** để tăng khả năng phát trên Windows/macOS và thiết bị phổ thông.
 - Auto/custom safe filename.
-- Chặn overwrite file tồn tại.
-- Folder picker.
-- Progress + cancel.
+- Chặn overwrite và đề xuất filename mới khi trùng.
+- Remember folder / Video-Audio / quality / notification preference.
+- Clipboard URL detection theo dạng gợi ý, không tự dán âm thầm.
+- Progress phase rõ: prepare → disk check → download → retry → post-process → complete.
+- Retry có giới hạn cho network / fragment / extractor errors.
+- Cleanup partial files khi cancel/fail.
+- Disk-space preflight trước download.
+- Desktop notification khi tải xong.
+- Download history local.
 - Reveal file sau download.
-- Friendly errors.
+- Friendly error mapping.
 - yt-dlp + FFmpeg sidecar.
-- Windows installer tự xử lý WebView2.
-- Windows app không mở console ở release.
-- Automated Windows build bootstrap.
+- Windows/macOS CI build.
 
-### Cần hoàn thiện trước khi mở rộng feature
+## Milestone B — Production stabilization
+
+Cần hoàn thiện trước khi mở rộng feature lớn:
 
 1. Clean-machine acceptance test Windows 10 + Windows 11.
 2. Kiểm tra 100% / 125% / 150% display scaling.
 3. Test Facebook / YouTube / TikTok public URL matrix.
-4. Kiểm tra cancel ở phase download và FFmpeg post-process.
-5. Code signing Windows installer.
-6. Dependency security audit có kiểm soát; không dùng `npm audit fix --force` mù quáng.
-7. Pin/checksum yt-dlp và FFmpeg release rõ ràng hơn cho reproducible build.
+4. Test cancel ở download và FFmpeg post-process.
+5. Test TikTok/nguồn chỉ có HEVC để quyết định policy fallback/transcode H.264.
+6. Windows code signing.
+7. macOS Developer ID signing + notarization.
+8. Dependency security audit có kiểm soát.
+9. Reproducible sidecar verification cho cả Windows/macOS.
+10. Auto-update yt-dlp engine có checksum/signature verification.
 
-## Milestone B — Reliability & Maintenance
+## Milestone C — Advanced Mode
 
-Ưu tiên cao nhất sau V1 ổn định.
+Các tính năng có privacy/security/complexity cao được tách khỏi core UI.
 
-- Auto-update **yt-dlp engine** độc lập với app release.
-- Kiểm tra engine version + health check.
-- Retry có backoff cho lỗi network tạm thời.
-- Download history local.
-- Persist user settings: folder, quality, mode.
-- Cleanup partial files khi cancel/fail.
-- Detect disk space trước download lớn.
-- Better post-processing progress cho FFmpeg.
+Xem [ADVANCED_MODE.md](ADVANCED_MODE.md).
 
-Lý do: website thay đổi thường xuyên; engine update và khả năng recovery có giá trị hơn việc thêm nhiều website-specific UI.
+### Authenticated sources
 
-## Milestone C — Authentication-sensitive Sources
+- Browser cookie import theo opt-in.
+- Login/session-assisted download.
+- Private/restricted content khi user có quyền truy cập.
+- Embedded browser chỉ xem xét khi browser-cookie flow không đủ.
 
-- Browser session/cookie integration theo opt-in.
-- Không lưu cookie thô lâu dài nếu không cần.
-- Giải thích rõ quyền truy cập và privacy.
-- Private/age/region restricted content handling.
+### Queue / playlist
 
-Đây là feature có security/privacy cost cao nên không đưa vào ngay sau V1 nếu public download vẫn là use case chính.
-
-## Milestone D — Power User
-
-- Batch URL.
-- Download queue.
-- Concurrency limit.
-- Playlist selector.
-- Subtitle download.
-- Thumbnail save.
+- Playlist lớn.
+- Queue management.
 - Per-item retry/cancel.
+- Concurrency scheduler.
+- Tối đa 10 download đồng thời chỉ khi người dùng chủ động chọn.
+- Giới hạn riêng FFmpeg post-process concurrency.
 
-## Milestone E — Distribution
+### Network / power user
 
-- macOS `.dmg` production build.
-- Apple Developer ID signing + notarization.
-- Windows code signing.
-- Auto-update application.
+- Proxy.
+- Format selector như `137+140`.
+- Custom yt-dlp arguments có validation/deny-list.
+- Subtitle / thumbnail / metadata options.
+
+## Milestone D — Maintenance & updater
+
+- yt-dlp engine health check.
+- Verified engine update độc lập với app release.
+- Application auto-update.
 - Release notes + rollback strategy.
+- Telemetry chỉ nếu có privacy model rõ ràng và opt-in; mặc định không cần.
 
-## Không nên ưu tiên sớm
+## Product rule
 
-- Account/cloud backend.
-- Đồng bộ đa thiết bị.
-- Theme system phức tạp.
-- Plugin architecture.
-- Tự reverse-engineer Facebook/YouTube thay cho yt-dlp.
+DropSave không đặt mục tiêu trở thành một UI phơi toàn bộ option của yt-dlp.
 
-Những phần này tăng maintenance nhưng chưa giải quyết vấn đề cốt lõi của người dùng.
+Core flow vẫn là:
 
-## Release-readiness gate trước feature mới
+```text
+Paste URL
+→ Preview
+→ Video/Audio
+→ Compatible output
+→ Download
+```
 
-Không thêm playlist/batch/authentication trước khi hoàn thành `ACCEPTANCE_TEST.md`:
-
-1. Clean-machine Windows 10 + 11.
-2. Scaling 100% / 125% / 150%, đặc biệt cửa sổ ~920px.
-3. YouTube / Facebook / TikTok public URL matrix.
-4. Cancel trong download và FFmpeg post-process; không để orphan process.
-5. Windows code signing; macOS Developer ID + notarization trước public distribution.
-6. Runtime dependency audit có review, không `npm audit fix --force` tự động.
-7. Pin + checksum/signature cho external binaries ở mức phù hợp production.
-
-### Sau gate này
-
-- P1: downloader engine update có xác minh, retry/transient error policy, cleanup partial files, disk-space preflight.
-- P1: download history và remember user preferences.
-- P2: clipboard URL detection, keyboard shortcuts, queue/batch.
-- P3: authenticated/restricted content sau security/privacy review.
+Advanced Mode phải được thiết kế sao cho không làm luồng mặc định phức tạp hơn.
