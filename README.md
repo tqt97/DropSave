@@ -1,7 +1,7 @@
 # DropSave
 
 <p align="center">
-  <strong>Desktop media downloader đơn giản cho Windows và macOS.</strong><br />
+  <strong>Cross-platform desktop media downloader cho Windows và macOS.</strong><br />
   Dán liên kết → chọn cách lưu → tải xuống. Không cần Terminal, yt-dlp hay FFmpeg riêng.
 </p>
 
@@ -18,6 +18,8 @@
   ·
   <a href="docs/USER_GUIDE.md">Hướng dẫn sử dụng</a>
   ·
+  <a href="docs/RELEASE_NOTES_v.1.0.1.md">v.1.0.1 Release Notes</a>
+  ·
   <a href="docs/ROADMAP.md">Roadmap</a>
   ·
   <a href="https://github.com/tqt97">TuanTQ</a>
@@ -29,18 +31,18 @@
 
 **DropSave** là ứng dụng desktop giúp tải media từ các URL công khai bằng giao diện trực quan, không cần sử dụng command line.
 
-Ứng dụng được xây dựng với:
+Stack chính:
 
 - **Tauri 2 + Rust** cho desktop shell và native operations.
-- **React + TypeScript** cho giao diện.
+- **React 19 + TypeScript** cho giao diện.
 - **yt-dlp** làm download engine.
-- **FFmpeg** cho merge, remux và xử lý audio/video.
+- **FFmpeg** cho merge, remux, audio extraction và codec conversion.
 
-yt-dlp và FFmpeg được đóng gói cùng ứng dụng, vì vậy người dùng cuối không cần tự cài các công cụ này.
+yt-dlp và FFmpeg được bundle cùng ứng dụng. Người dùng cuối không cần tự cài Node.js, Rust, yt-dlp hay FFmpeg.
 
 > DropSave chỉ dành cho nội dung mà bạn có quyền truy cập và lưu trữ. Người dùng chịu trách nhiệm tuân thủ điều khoản của nền tảng và pháp luật áp dụng.
 
-## DropSave có thể làm gì?
+## Tính năng hiện tại — v.1.0.1
 
 ### Nguồn phổ biến
 
@@ -51,158 +53,145 @@ DropSave có thể xử lý nhiều URL công khai mà yt-dlp hỗ trợ, bao g�
 - TikTok
 - Và nhiều website khác có extractor tương thích trong yt-dlp
 
-Khả năng tương thích có thể thay đổi khi website nguồn thay đổi. DropSave không cam kết mọi URL từ một nền tảng luôn tải được ở mọi thời điểm.
+Khả năng tương thích có thể thay đổi khi website nguồn thay đổi.
 
-### Chế độ tải
+### Video / Audio
 
 | Chế độ | Tuỳ chọn |
 | --- | --- |
 | Video | MP4 |
-| Chất lượng video | Best, tối đa 1080p, tối đa 720p |
+| Chất lượng | Tốt nhất tương thích, tối đa 1080p, tối đa 720p |
 | Audio | MP3 |
-| Tên file | Tự động từ tiêu đề hoặc nhập thủ công |
-| Thư mục lưu | Downloads mặc định hoặc thư mục do người dùng chọn |
+| Tên file | Tự động từ title hoặc nhập thủ công |
+| Thư mục lưu | Downloads mặc định hoặc thư mục được chọn |
 
-Ngoài ra:
+### Compatibility-first output
 
-- Preview title, thumbnail, uploader và duration.
-- Hiển thị progress, tốc độ tải và ETA.
-- Cancel download đang chạy.
-- Không tự ghi đè file đã tồn tại.
-- Chuẩn hoá filename an toàn cho Windows/macOS.
-- Mở Explorer/Finder và reveal đúng file sau khi tải xong.
-- Hiển thị lỗi kỹ thuật bằng thông báo dễ hiểu hơn.
+Video mặc định ưu tiên:
 
-## Reliability & compatibility
+```text
+MP4
+→ H.264 / AVC
++ AAC / M4A
+```
 
-DropSave hiện ưu tiên trải nghiệm tải xong là có thể sử dụng ngay:
+Nếu nguồn không có H.264, DropSave có thể dùng FFmpeg chuyển codec sau khi tải để tăng khả năng phát trên Windows/macOS.
 
-- Nhớ thư mục lưu, Video/Audio, quality và tùy chọn notification.
-- Phát hiện URL hợp lệ trong clipboard theo dạng gợi ý; không tự dán âm thầm.
+Trong phase này UI sẽ thông báo rõ rằng ứng dụng đang chuyển đổi codec và thời gian hoàn tất có thể lâu hơn.
+
+## Reliability & daily UX
+
+v.1.0.1 tập trung mạnh vào reliability và các case sử dụng hằng ngày:
+
+- Nhớ **thư mục lưu**, **Video/Audio**, **quality** và tùy chọn notification.
+- Phát hiện URL hợp lệ trong clipboard theo dạng **gợi ý**, không tự dán âm thầm.
 - Retry có giới hạn cho lỗi network, fragment và extractor tạm thời.
-- Cleanup `.part`/file tạm và output chưa hoàn tất khi Cancel.
-- Kiểm tra dung lượng ổ đĩa trước khi bắt đầu.
-- Hiển thị phase: chuẩn bị → kiểm tra → tải → retry → FFmpeg → hoàn tất.
-- Thông báo native khi download hoàn tất.
-- Lịch sử download local, không cần backend/cloud.
-- Khi trùng filename, không ghi đè và đề xuất tên mới để người dùng xác nhận.
-- Video ưu tiên MP4 H.264/AVC + AAC. Nếu nguồn không có H.264, DropSave tự dùng FFmpeg chuyển sang H.264/AAC để tăng khả năng phát trên Windows/macOS.
+- Cleanup file `.part`, `.ytdl`, `.temp`, file convert tạm và output chưa hoàn tất khi Cancel.
+- Kiểm tra dung lượng ổ đĩa trước khi bắt đầu download.
+- Progress theo phase: chuẩn bị → kiểm tra dung lượng → download → retry → FFmpeg → hoàn tất.
+- Native notification khi download hoàn tất.
+- Download history lưu local, không cần backend/cloud.
+- Không ghi đè file cùng tên; DropSave đề xuất filename mới để người dùng xác nhận.
+- Mở Explorer/Finder và reveal đúng file sau khi hoàn tất.
+- Friendly error mapping cho lỗi login, unsupported URL, format, network và unavailable content.
 
-Các tính năng cookie/login/private/playlist/proxy/custom format được tách sang [Advanced Mode](docs/ADVANCED_MODE.md) thay vì làm UI mặc định phức tạp.
 ## Download
 
-### Windows
+### Windows x64
 
-Tải file:
+```text
+DropSave-Windows-x64-Setup.exe
+```
 
-    DropSave-Windows-x64-Setup.exe
+### macOS Apple Silicon
 
-Sau đó double-click installer và sử dụng DropSave như một ứng dụng Windows bình thường.
+```text
+DropSave-macOS-Apple-Silicon.dmg
+```
 
-**Không cần cài:** Node.js, Rust, Visual Studio, yt-dlp hoặc FFmpeg.
+### macOS Intel
 
-### macOS — Apple Silicon
+```text
+DropSave-macOS-Intel.dmg
+```
 
-Dành cho Mac dùng Apple Silicon như M1, M2, M3, M4 và các thế hệ tương thích:
+**[→ Download bản mới nhất từ GitHub Releases](https://github.com/tqt97/DropSave/releases/latest)**
 
-    DropSave-macOS-Apple-Silicon.dmg
-
-### macOS — Intel
-
-Dành cho Mac Intel:
-
-    DropSave-macOS-Intel.dmg
-
-### Tải bản mới nhất
-
-**[→ Download DropSave từ GitHub Releases](https://github.com/tqt97/DropSave/releases/latest)**
-
-Hướng dẫn Windows chi tiết: [docs/DOWNLOAD_WINDOWS.md](docs/DOWNLOAD_WINDOWS.md).
+Hướng dẫn Windows: [docs/DOWNLOAD_WINDOWS.md](docs/DOWNLOAD_WINDOWS.md).
 
 ## Cách sử dụng
 
 1. Mở DropSave.
-2. Dán URL media.
+2. Dán URL hoặc dùng gợi ý URL từ clipboard.
 3. Chờ DropSave đọc metadata.
 4. Chọn **Video** hoặc **Audio**.
-5. Chọn chất lượng nếu tải video.
-6. Giữ tên file tự động hoặc chuyển sang tên tuỳ chỉnh.
+5. Chọn quality nếu tải video.
+6. Giữ tên file tự động hoặc nhập tên riêng.
 7. Chọn thư mục lưu nếu cần.
 8. Bấm **Tải xuống**.
-9. Khi hoàn tất, mở vị trí file trong Explorer/Finder nếu muốn.
-
-Nếu file cùng tên đã tồn tại, DropSave sẽ dừng trước khi ghi file và yêu cầu đổi tên hoặc chọn thư mục khác.
-
-## Trải nghiệm mục tiêu
-
-    Paste URL
-       ↓
-    Preview
-       ↓
-    Choose Video / Audio
-       ↓
-    Download
-       ↓
-    Open file location
-
-Các option kỹ thuật của yt-dlp/FFmpeg được ẩn khỏi người dùng phổ thông thay vì đưa toàn bộ command-line options lên giao diện.
+9. Theo dõi phase download/post-process.
+10. Khi hoàn tất, mở vị trí file trong Explorer/Finder nếu muốn.
 
 ## Platform support
 
 | Platform | Architecture | Package | Trạng thái |
 | --- | --- | --- | --- |
-| Windows 10/11 | x64 | NSIS .exe | Supported |
-| macOS | Apple Silicon | .dmg | Supported |
-| macOS | Intel x64 | .dmg | Supported |
-| Linux | — | — | Chưa nằm trong scope v1.0.0 |
+| Windows 10/11 | x64 | NSIS `.exe` | Supported |
+| macOS | Apple Silicon | `.dmg` | Supported |
+| macOS | Intel x64 | `.dmg` | Supported |
+| Linux | — | — | Chưa nằm trong scope v.1.0.1 |
 
 Chi tiết: [docs/PLATFORM_SUPPORT.md](docs/PLATFORM_SUPPORT.md).
 
 ## Build từ source
 
-### Requirements cho developer
-
-Máy build cần các dependency phát triển tương ứng với platform:
+### Developer requirements
 
 - Node.js 22
 - npm
 - Rust / Cargo
-- Toolchain native của platform
-- Các dependency mà Tauri yêu cầu
-
-Đây là **build-time dependencies**. Người dùng cài app không cần chúng.
+- Native toolchain tương ứng với platform
+- Các dependency Tauri yêu cầu
 
 ### Windows
 
-Cách đơn giản nhất:
-
-    windows/Build-DropSave.cmd
-
-Script sẽ tự kiểm tra/bootstrap phần lớn môi trường build còn thiếu và tạo NSIS installer.
+```text
+windows/Build-DropSave.cmd
+```
 
 Hoặc:
 
-    npm install
-    npm run desktop:build
+```powershell
+npm install
+npm run desktop:build
+```
 
 Kiểm tra môi trường:
 
-    npm run doctor
+```powershell
+npm run doctor
+```
 
 ### Development
 
-    npm install
-    npm run desktop:dev
+```bash
+npm install
+npm run desktop:dev
+```
 
 ### Test
 
-    npm test
+```bash
+npm test
+```
 
 ## CI/CD
 
 Workflow chính:
 
-    .github/workflows/release-desktop.yml
+```text
+.github/workflows/release-desktop.yml
+```
 
 GitHub Actions build native trên:
 
@@ -210,126 +199,125 @@ GitHub Actions build native trên:
 - macOS Apple Silicon
 - macOS Intel
 
-Mỗi push vào **master** chạy validation build.
+Pipeline release:
 
-Release có thể được tạo bằng:
+```text
+Source / Tag
+    ↓
+Windows x64 ───────────→ .exe
+macOS Apple Silicon ───→ .dmg
+macOS Intel ────────────→ .dmg
+    ↓
+GitHub Release
+```
 
-- push tag bắt đầu bằng **v**;
+Workflow hỗ trợ:
+
+- push tag `v*`;
 - publish GitHub Release;
-- hoặc chạy workflow thủ công với **release_tag**.
+- manual workflow với `release_tag`;
+- push `master` để validation build.
 
-Pipeline:
-
-    Source / Tag
-        ↓
-    Windows x64 ───────────→ .exe
-    macOS Apple Silicon ───→ .dmg
-    macOS Intel ────────────→ .dmg
-        ↓
-    GitHub Release
+Build `master` cũ sẽ bị cancel khi commit mới tới để tránh queue CI dư thừa.
 
 Xem [docs/CI_CD.md](docs/CI_CD.md) và [docs/RELEASE.md](docs/RELEASE.md).
 
 ## Kiến trúc
 
-    React + TypeScript
-           ↓
-       Tauri IPC
-           ↓
-    Rust desktop layer
-           ↓
-      yt-dlp + FFmpeg
-        sidecars
-           ↓
-    Local filesystem
+```text
+React + TypeScript
+       ↓
+    Tauri IPC
+       ↓
+Rust desktop layer
+       ↓
+┌───────────────┬───────────────┐
+│    yt-dlp     │    FFmpeg     │
+│   sidecar     │    sidecar    │
+└───────────────┴───────────────┘
+       ↓
+Local filesystem
+```
 
-Các thao tác nhạy cảm với filesystem/process được giữ ở native layer thay vì giao trực tiếp cho UI.
+Filesystem/process-sensitive operations được giữ ở native layer thay vì để UI thao tác trực tiếp.
 
 Chi tiết: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Security & supply chain
 
-DropSave áp dụng các nguyên tắc:
-
-- Không chạy shell command tuỳ ý từ input của người dùng.
-- URL được truyền dưới dạng argument thay vì ghép thành shell string.
-- Không lưu password, cookie hoặc access token trong v1.
+- Không chạy shell command tùy ý từ input người dùng.
+- URL được truyền dưới dạng argument thay vì ghép shell string.
+- Không lưu password, cookie hoặc access token trong core mode.
 - Không ghi đè file hiện có.
 - yt-dlp được pin theo release và verify checksum khi chuẩn bị sidecar.
 - FFmpeg Windows dùng versioned artifact và SHA-256 verification.
 - Dependency audit được thực hiện có kiểm soát.
-- Không chạy npm audit fix --force tự động.
+- Không tự chạy `npm audit fix --force`.
 - Dependabot theo dõi npm, Cargo và GitHub Actions.
 
 Chi tiết: [docs/SECURITY.md](docs/SECURITY.md).
 
+## Advanced Mode
+
+Các tính năng có privacy/security/complexity cao **chưa nằm trong core UI v.1.0.1**:
+
+- Browser cookie import
+- Login/session-assisted download
+- Private/restricted content
+- Playlist / batch / queue
+- Concurrency scheduler
+- Proxy
+- Format selector như `137+140`
+- Custom yt-dlp arguments
+- Embedded browser
+
+Thiết kế và safety plan: [docs/ADVANCED_MODE.md](docs/ADVANCED_MODE.md).
+
+## Known limitations — v.1.0.1
+
+- Chưa hỗ trợ browser cookies/login/private content trong core mode.
+- Chưa có playlist/batch/queue nhiều download.
+- Chưa có proxy/custom format/custom yt-dlp arguments trong UI.
+- Chưa có auto-update yt-dlp engine sau khi app đã cài.
+- Windows installer chưa có production code signing.
+- macOS public distribution chưa có Developer ID signing + notarization.
+- Linux chưa nằm trong scope hiện tại.
+
 ## Release quality gates
 
-Trước khi mở rộng feature lớn, project ưu tiên:
+Trước khi mở rộng feature lớn, project tiếp tục ưu tiên:
 
-- Clean-machine test trên Windows 10 và Windows 11.
+- Clean-machine Windows 10/11.
 - Display scaling 100% / 125% / 150%.
-- Public URL matrix cho YouTube / Facebook / TikTok.
-- Cancel lifecycle trong download và FFmpeg post-process.
+- Public URL matrix YouTube / Facebook / TikTok.
+- Cancel lifecycle cả yt-dlp và FFmpeg.
+- Case HEVC/AV1 → H.264/AAC compatibility conversion.
 - Windows code signing.
-- macOS signing + notarization cho public distribution.
-- Dependency security audit.
-- Reproducible sidecar build.
-- Cleanup partial downloads.
-- Disk-space preflight.
-- Retry transient network errors.
+- macOS signing + notarization.
+- Reproducible sidecar verification.
+- Verified downloader-engine update.
 
-Checklist đầy đủ: [docs/ACCEPTANCE_TEST.md](docs/ACCEPTANCE_TEST.md).
-
-## Known limitations
-
-v1.0.0 tập trung vào public media và trải nghiệm đơn giản:
-
-- Chưa hỗ trợ login/private content bằng browser session.
-- Chưa có playlist/batch download.
-- Chưa có download history.
-- Chưa có queue nhiều download.
-- Chưa có auto-update download engine sau khi app đã được cài.
-- Windows installer chưa có production code signing.
-- macOS public release chưa có Developer ID notarization.
-
-Các giới hạn này được giữ có chủ đích để ưu tiên reliability của luồng tải cơ bản trước khi mở rộng.
+Checklist: [docs/ACCEPTANCE_TEST.md](docs/ACCEPTANCE_TEST.md).
 
 ## Documentation
 
 | Tài liệu | Nội dung |
 | --- | --- |
 | [USER_GUIDE.md](docs/USER_GUIDE.md) | Hướng dẫn sử dụng |
-| [DOWNLOAD_WINDOWS.md](docs/DOWNLOAD_WINDOWS.md) | Hướng dẫn tải/cài Windows |
+| [DOWNLOAD_WINDOWS.md](docs/DOWNLOAD_WINDOWS.md) | Tải/cài Windows |
 | [INSTALLATION.md](docs/INSTALLATION.md) | Setup và cài đặt |
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Kiến trúc hệ thống |
 | [CI_CD.md](docs/CI_CD.md) | Build/release automation |
 | [RELEASE.md](docs/RELEASE.md) | Quy trình release |
+| [RELEASE_NOTES_v.1.0.1.md](docs/RELEASE_NOTES_v.1.0.1.md) | Release notes v.1.0.1 |
 | [SECURITY.md](docs/SECURITY.md) | Security & supply chain |
 | [TESTING.md](docs/TESTING.md) | Test strategy |
-| [ACCEPTANCE_TEST.md](docs/ACCEPTANCE_TEST.md) | Release acceptance matrix |
+| [ACCEPTANCE_TEST.md](docs/ACCEPTANCE_TEST.md) | Acceptance matrix |
 | [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Xử lý lỗi |
 | [PLATFORM_SUPPORT.md](docs/PLATFORM_SUPPORT.md) | Platform matrix |
 | [ROADMAP.md](docs/ROADMAP.md) | Hướng phát triển |
+| [ADVANCED_MODE.md](docs/ADVANCED_MODE.md) | Advanced Mode design |
 | [UI_UX_REVIEW.md](docs/UI_UX_REVIEW.md) | UI/UX review |
-
-## Roadmap
-
-Thứ tự ưu tiên:
-
-    Reliability
-       ↓
-    Updater / recovery
-       ↓
-    History & preferences
-       ↓
-    Queue / batch / playlist
-       ↓
-    Authenticated content
-
-DropSave không đặt mục tiêu trở thành giao diện chứa toàn bộ option của yt-dlp. Product direction là giữ use case phổ biến đơn giản, còn tính năng nâng cao chỉ được bổ sung khi không làm giảm trải nghiệm chính.
-
-Xem [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Author
 
@@ -337,11 +325,11 @@ Xem [docs/ROADMAP.md](docs/ROADMAP.md).
 
 GitHub: **[@tqt97](https://github.com/tqt97)**
 
-Contributions, bug reports và đề xuất cải tiến đều được chào đón thông qua GitHub Issues / Pull Requests.
+Contributions, bug reports và đề xuất cải tiến được chào đón qua GitHub Issues / Pull Requests.
 
 ---
 
 <p align="center">
-  <strong>DropSave v1.0.0</strong><br />
+  <strong>DropSave v.1.0.1</strong><br />
   Paste. Choose. Save.
 </p>
