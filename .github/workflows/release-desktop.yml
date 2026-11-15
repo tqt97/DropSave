@@ -2,6 +2,15 @@ name: Release Desktop
 
 on:
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Existing release tag to build and attach assets to (for example v.1.0.0). Leave empty for validation only.'
+        required: false
+        type: string
+        default: ''
+  release:
+    types:
+      - published
   push:
     branches:
       - master
@@ -17,6 +26,8 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || (github.event_name == 'workflow_dispatch' && inputs.release_tag != '' && inputs.release_tag || github.ref) }}
 
       - uses: actions/setup-node@v6
         with:
@@ -77,6 +88,8 @@ jobs:
       APPLE_SIGNING_IDENTITY: '-'
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || (github.event_name == 'workflow_dispatch' && inputs.release_tag != '' && inputs.release_tag || github.ref) }}
 
       - uses: actions/setup-node@v6
         with:
@@ -129,6 +142,8 @@ jobs:
       APPLE_SIGNING_IDENTITY: '-'
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || (github.event_name == 'workflow_dispatch' && inputs.release_tag != '' && inputs.release_tag || github.ref) }}
 
       - uses: actions/setup-node@v6
         with:
@@ -176,7 +191,7 @@ jobs:
 
   publish-release:
     name: Publish GitHub Release
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.release_tag != '')
     needs: [build-windows, build-macos-arm64, build-macos-intel]
     runs-on: ubuntu-latest
     steps:
@@ -189,6 +204,7 @@ jobs:
       - name: Publish release assets
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.event_name == 'release' && github.event.release.tag_name || (github.event_name == 'workflow_dispatch' && inputs.release_tag != '' && inputs.release_tag || github.ref_name) }}
           generate_release_notes: true
           files: |
             release-files/DropSave-Windows-x64-Setup.exe
