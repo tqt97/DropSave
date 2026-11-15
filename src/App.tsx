@@ -29,7 +29,7 @@ import { revealDownloadedFile } from './services/downloader';
 import type { DownloadHistoryItem } from './services/history';
 import { loadPreferences, savePreferences } from './services/preferences';
 
-const APP_VERSION = 'v.1.0.1';
+const APP_VERSION = 'v.1.0.2';
 const initialPreferences = loadPreferences();
 
 function AppContent() {
