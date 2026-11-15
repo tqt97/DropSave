@@ -11,6 +11,7 @@ export interface VideoMetadata {
   webpageUrl: string;
   extractor?: string;
   estimatedBytes?: number;
+  compatibleVideoAvailable?: boolean;
 }
 
 export interface DownloadOptions {
@@ -20,6 +21,7 @@ export interface DownloadOptions {
   outputDirectory: string;
   filename: string;
   estimatedBytes?: number;
+  forceCompatibilityTranscode?: boolean;
 }
 
 export interface DownloadProgress {
