@@ -258,12 +258,13 @@ function AppContent() {
                   <option value="720">Tối đa 720p</option>
                 </select>
                 <small>{mode === 'audio' ? 'Không áp dụng cho audio' : 'Ưu tiên H.264/AAC. Nếu nguồn không có H.264, DropSave sẽ tự chuyển đổi sau khi tải.'}</small>
-                {mode === 'video' && metadata.compatibleVideoAvailable === false && (
-                  <div className="compatibility-warning">
-                    Nguồn này không cung cấp H.264. Thời gian hoàn tất sẽ lâu hơn vì DropSave cần chuyển codec bằng FFmpeg.
-                  </div>
-                )}
               </div>
+
+              {mode === 'video' && metadata.compatibleVideoAvailable === false && (
+                <div className="compatibility-warning full-span" role="note">
+                  Nguồn này không cung cấp H.264. Thời gian hoàn tất sẽ lâu hơn vì DropSave cần chuyển codec bằng FFmpeg.
+                </div>
+              )}
 
               <div className="field-group full-span filename-group">
                 <div className="label-row">
