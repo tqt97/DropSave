@@ -83,7 +83,7 @@ jobs:
           Copy-Item $installer.FullName release-artifact/DropSave-Windows-x64-Setup.exe
           Copy-Item npm-audit-runtime.json release-artifact/npm-audit-runtime.json -ErrorAction SilentlyContinue
 
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: DropSave-Windows-x64
           path: release-artifact/
@@ -149,7 +149,7 @@ jobs:
 
           hdiutil verify "release-artifact/DropSave-macOS-Apple-Silicon.dmg"
 
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: DropSave-macOS-Apple-Silicon
           path: release-artifact/
@@ -215,7 +215,7 @@ jobs:
 
           hdiutil verify "release-artifact/DropSave-macOS-Intel.dmg"
 
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: DropSave-macOS-Intel
           path: release-artifact/
