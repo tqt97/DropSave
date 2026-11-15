@@ -73,6 +73,22 @@ Ngoài ra:
 - Mở Explorer/Finder và reveal đúng file sau khi tải xong.
 - Hiển thị lỗi kỹ thuật bằng thông báo dễ hiểu hơn.
 
+## Reliability & compatibility
+
+DropSave hiện ưu tiên trải nghiệm tải xong là có thể sử dụng ngay:
+
+- Nhớ thư mục lưu, Video/Audio, quality và tùy chọn notification.
+- Phát hiện URL hợp lệ trong clipboard theo dạng gợi ý; không tự dán âm thầm.
+- Retry có giới hạn cho lỗi network, fragment và extractor tạm thời.
+- Cleanup `.part`/file tạm và output chưa hoàn tất khi Cancel.
+- Kiểm tra dung lượng ổ đĩa trước khi bắt đầu.
+- Hiển thị phase: chuẩn bị → kiểm tra → tải → retry → FFmpeg → hoàn tất.
+- Thông báo native khi download hoàn tất.
+- Lịch sử download local, không cần backend/cloud.
+- Khi trùng filename, không ghi đè và đề xuất tên mới để người dùng xác nhận.
+- Video ưu tiên MP4 H.264/AVC + AAC. Nếu nguồn không có H.264, DropSave tự dùng FFmpeg chuyển sang H.264/AAC để tăng khả năng phát trên Windows/macOS.
+
+Các tính năng cookie/login/private/playlist/proxy/custom format được tách sang [Advanced Mode](docs/ADVANCED_MODE.md) thay vì làm UI mặc định phức tạp.
 ## Download
 
 ### Windows
