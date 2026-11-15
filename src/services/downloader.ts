@@ -316,21 +316,59 @@ const transcodeForCompatibility = async (
     tempPath
   ]);
 
-  const output = await command.execute();
-  if (output.code !== 0) {
-    throw {
-      title: 'Không thể chuyển đổi codec',
-      message: 'Video đã tải nhưng bước chuyển sang H.264/AAC không hoàn tất.',
-      suggestion: 'File nguồn có thể vẫn phát được bằng VLC. Hãy thử lại hoặc mở issue kèm URL public để kiểm tra.',
-      technical: output.stderr || output.stdout,
-      code: 'generic'
-    } satisfies FriendlyError;
-  }
+  let stderr = '';
+  command.stderr.on('data', (line) => { stderr += `${line}\n`; });
 
-  await invoke('replace_with_compatible_file', {
-    outputDirectory: options.outputDirectory,
-    filename: options.filename
-  });
+  cancelRequested = false;
+  activeOptions = options;
+  activeChild = await command.spawn();
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      command.on('close', (data) => {
+        activeChild = null;
+        if (data.code === 0) {
+          resolve();
+          return;
+        }
+        if (cancelRequested) {
+          reject({
+            title: 'Đã hủy chuyển đổi',
+            message: 'DropSave đã dừng FFmpeg và đang dọn tệp chuyển đổi tạm.',
+            code: 'cancelled'
+          } satisfies FriendlyError);
+          return;
+        }
+        reject({
+          title: 'Không thể chuyển đổi codec',
+          message: 'Video đã tải nhưng bước chuyển sang H.264/AAC không hoàn tất.',
+          suggestion: 'File nguồn có thể vẫn phát được bằng VLC. Hãy thử lại hoặc mở issue kèm URL public để kiểm tra.',
+          technical: stderr || `FFmpeg exited with code ${data.code}`,
+          code: 'generic'
+        } satisfies FriendlyError);
+      });
+      command.on('error', (error) => {
+        activeChild = null;
+        reject({
+          title: 'Không thể chạy FFmpeg',
+          message: 'DropSave không thể khởi động bước chuyển đổi codec.',
+          technical: String(error),
+          code: 'generic'
+        } satisfies FriendlyError);
+      });
+    });
+
+    await invoke('replace_with_compatible_file', {
+      outputDirectory: options.outputDirectory,
+      filename: options.filename
+    });
+  } catch (error) {
+    await cleanupPartialFiles(options);
+    throw error;
+  } finally {
+    activeOptions = null;
+    activeChild = null;
+  }
 };
 
 export const revealDownloadedFile = async (options: Pick<DownloadOptions, 'outputDirectory' | 'filename' | 'mode'>): Promise<void> => {
