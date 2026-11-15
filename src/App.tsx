@@ -141,7 +141,8 @@ function AppContent() {
       quality,
       outputDirectory: folder,
       filename: slugifyFilename(filename),
-      estimatedBytes: metadata.estimatedBytes
+      estimatedBytes: metadata.estimatedBytes,
+      forceCompatibilityTranscode: mode === 'video' && metadata.compatibleVideoAvailable === false
     }, notifyOnComplete);
   };
 
@@ -256,7 +257,12 @@ function AppContent() {
                   <option value="1080">Tối đa 1080p</option>
                   <option value="720">Tối đa 720p</option>
                 </select>
-                <small>{mode === 'audio' ? 'Không áp dụng cho audio' : 'Ưu tiên H.264/AAC rồi tự fallback nếu nguồn không có.'}</small>
+                <small>{mode === 'audio' ? 'Không áp dụng cho audio' : 'Ưu tiên H.264/AAC. Nếu nguồn không có H.264, DropSave sẽ tự chuyển đổi sau khi tải.'}</small>
+                {mode === 'video' && metadata.compatibleVideoAvailable === false && (
+                  <div className="compatibility-warning">
+                    Nguồn này không cung cấp H.264. Thời gian hoàn tất sẽ lâu hơn vì DropSave cần chuyển codec bằng FFmpeg.
+                  </div>
+                )}
               </div>
 
               <div className="field-group full-span filename-group">
