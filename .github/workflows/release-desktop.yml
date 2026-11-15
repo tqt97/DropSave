@@ -122,20 +122,32 @@ jobs:
       - name: Prepare pinned yt-dlp and bundled FFmpeg
         run: npm run prepare:sidecars
 
-      - name: Build DMG
+      - name: Build macOS app bundle
         uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           APPLE_SIGNING_IDENTITY: '-'
         with:
-          args: --bundles dmg
+          args: --bundles app
 
-      - name: Normalize macOS artifact
+      - name: Create headless DMG
+        shell: bash
         run: |
+          set -euo pipefail
+
+          APP="src-tauri/target/release/bundle/macos/DropSave.app"
+          test -d "$APP"
+
+          STAGE="$(mktemp -d)"
+          trap 'rm -rf "$STAGE"' EXIT
+
+          cp -R "$APP" "$STAGE/DropSave.app"
+          ln -s /Applications "$STAGE/Applications"
+
           mkdir -p release-artifact
-          DMG=$(find src-tauri/target/release/bundle/dmg -name '*.dmg' -type f | head -n 1)
-          test -n "$DMG"
-          cp "$DMG" release-artifact/DropSave-macOS-Apple-Silicon.dmg
+          hdiutil create             -volname "DropSave"             -srcfolder "$STAGE"             -ov             -format UDZO             "release-artifact/DropSave-macOS-Apple-Silicon.dmg"
+
+          hdiutil verify "release-artifact/DropSave-macOS-Apple-Silicon.dmg"
 
       - uses: actions/upload-artifact@v6
         with:
@@ -176,20 +188,32 @@ jobs:
       - name: Prepare pinned yt-dlp and bundled FFmpeg
         run: npm run prepare:sidecars
 
-      - name: Build DMG
+      - name: Build macOS app bundle
         uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           APPLE_SIGNING_IDENTITY: '-'
         with:
-          args: --bundles dmg
+          args: --bundles app
 
-      - name: Normalize macOS artifact
+      - name: Create headless DMG
+        shell: bash
         run: |
+          set -euo pipefail
+
+          APP="src-tauri/target/release/bundle/macos/DropSave.app"
+          test -d "$APP"
+
+          STAGE="$(mktemp -d)"
+          trap 'rm -rf "$STAGE"' EXIT
+
+          cp -R "$APP" "$STAGE/DropSave.app"
+          ln -s /Applications "$STAGE/Applications"
+
           mkdir -p release-artifact
-          DMG=$(find src-tauri/target/release/bundle/dmg -name '*.dmg' -type f | head -n 1)
-          test -n "$DMG"
-          cp "$DMG" release-artifact/DropSave-macOS-Intel.dmg
+          hdiutil create             -volname "DropSave"             -srcfolder "$STAGE"             -ov             -format UDZO             "release-artifact/DropSave-macOS-Intel.dmg"
+
+          hdiutil verify "release-artifact/DropSave-macOS-Intel.dmg"
 
       - uses: actions/upload-artifact@v6
         with:
