@@ -18,7 +18,7 @@
   ·
   <a href="docs/USER_GUIDE.md">Hướng dẫn sử dụng</a>
   ·
-  <a href="docs/RELEASE_NOTES_v.1.0.1.md">v.1.0.1 Release Notes</a>
+  <a href="CHANGELOG.md">Changelog</a>
   ·
   <a href="docs/ROADMAP.md">Roadmap</a>
   ·
@@ -42,7 +42,7 @@ yt-dlp và FFmpeg được bundle cùng ứng dụng. Người dùng cuối khô
 
 > DropSave chỉ dành cho nội dung mà bạn có quyền truy cập và lưu trữ. Người dùng chịu trách nhiệm tuân thủ điều khoản của nền tảng và pháp luật áp dụng.
 
-## Tính năng hiện tại — v.1.0.1
+## Tính năng hiện tại — v.1.0.2
 
 ### Nguồn phổ biến
 
@@ -81,7 +81,7 @@ Trong phase này UI sẽ thông báo rõ rằng ứng dụng đang chuyển đ�
 
 ## Reliability & daily UX
 
-v.1.0.1 tập trung mạnh vào reliability và các case sử dụng hằng ngày:
+v.1.0.2 tập trung mạnh vào reliability và các case sử dụng hằng ngày:
 
 - Nhớ **thư mục lưu**, **Video/Audio**, **quality** và tùy chọn notification.
 - Phát hiện URL hợp lệ trong clipboard theo dạng **gợi ý**, không tự dán âm thầm.
@@ -139,7 +139,7 @@ Hướng dẫn Windows: [docs/DOWNLOAD_WINDOWS.md](docs/DOWNLOAD_WINDOWS.md).
 | Windows 10/11 | x64 | NSIS `.exe` | Supported |
 | macOS | Apple Silicon | `.dmg` | Supported |
 | macOS | Intel x64 | `.dmg` | Supported |
-| Linux | — | — | Chưa nằm trong scope v.1.0.1 |
+| Linux | — | — | Chưa nằm trong scope v.1.0.2 |
 
 Chi tiết: [docs/PLATFORM_SUPPORT.md](docs/PLATFORM_SUPPORT.md).
 
@@ -259,7 +259,7 @@ Chi tiết: [docs/SECURITY.md](docs/SECURITY.md).
 
 ## Advanced Mode
 
-Các tính năng có privacy/security/complexity cao **chưa nằm trong core UI v.1.0.1**:
+Các tính năng có privacy/security/complexity cao **chưa nằm trong core UI v.1.0.2**:
 
 - Browser cookie import
 - Login/session-assisted download
@@ -273,7 +273,7 @@ Các tính năng có privacy/security/complexity cao **chưa nằm trong core UI
 
 Thiết kế và safety plan: [docs/ADVANCED_MODE.md](docs/ADVANCED_MODE.md).
 
-## Known limitations — v.1.0.1
+## Known limitations — v.1.0.2
 
 - Chưa hỗ trợ browser cookies/login/private content trong core mode.
 - Chưa có playlist/batch/queue nhiều download.
@@ -309,7 +309,7 @@ Checklist: [docs/ACCEPTANCE_TEST.md](docs/ACCEPTANCE_TEST.md).
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Kiến trúc hệ thống |
 | [CI_CD.md](docs/CI_CD.md) | Build/release automation |
 | [RELEASE.md](docs/RELEASE.md) | Quy trình release |
-| [RELEASE_NOTES_v.1.0.1.md](docs/RELEASE_NOTES_v.1.0.1.md) | Release notes v.1.0.1 |
+| [RELEASE_NOTES_v.1.0.2.md](docs/RELEASE_NOTES_v.1.0.2.md) | Release notes v.1.0.2 |
 | [SECURITY.md](docs/SECURITY.md) | Security & supply chain |
 | [TESTING.md](docs/TESTING.md) | Test strategy |
 | [ACCEPTANCE_TEST.md](docs/ACCEPTANCE_TEST.md) | Acceptance matrix |
@@ -330,6 +330,6 @@ Contributions, bug reports và đề xuất cải tiến được chào đón qu
 ---
 
 <p align="center">
-  <strong>DropSave v.1.0.1</strong><br />
+  <strong>DropSave v.1.0.2</strong><br />
   Paste. Choose. Save.
 </p>
