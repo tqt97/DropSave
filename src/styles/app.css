@@ -200,3 +200,6 @@ select:focus, .text-input:focus { border-color: #718550; }
   .clipboard-suggestion small { max-width: 230px; }
   .history-head { align-items: flex-start; }
 }
+
+
+.compatibility-warning { margin-top: 2px; border: 1px solid rgba(255,190,92,.28); background: rgba(255,166,51,.07); border-radius: 9px; padding: 8px 9px; color: #d5ad71; font-size: 10.5px; line-height: 1.45; }
