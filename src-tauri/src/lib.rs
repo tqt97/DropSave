@@ -112,6 +112,16 @@ fn cleanup_partial_files(output_directory: String, filename: String) -> Result<u
 }
 
 #[tauri::command]
+fn remove_output_file(output_directory: String, filename: String, extension: String) -> Result<bool, String> {
+    let path = safe_output_path(&output_directory, &filename, &extension)?;
+    if !path.exists() {
+        return Ok(false);
+    }
+    fs::remove_file(path).map_err(|error| error.to_string())?;
+    Ok(true)
+}
+
+#[tauri::command]
 fn compatibility_temp_path(output_directory: String, filename: String) -> Result<String, String> {
     let final_path = safe_output_path(&output_directory, &filename, "mp4")?;
     let temp_path = final_path.with_file_name(format!("{filename}.compatible.mp4"));
@@ -165,6 +175,7 @@ pub fn run() {
             suggest_output_filename,
             available_space,
             cleanup_partial_files,
+            remove_output_file,
             compatibility_temp_path,
             replace_with_compatible_file,
             reveal_output_file
